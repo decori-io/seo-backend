@@ -1,7 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
-export type UserDocument = User & Document;
+export interface IUser {
+  _id: Types.ObjectId;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type UserDocument = IUser & Document;
 
 @Schema({ timestamps: true })
 export class User {
