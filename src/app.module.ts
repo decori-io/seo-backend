@@ -3,11 +3,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { WebsiteProfilesModule } from './website-profiles/website-profiles.module';
-import { WebsiteProfilesModule } from './website-profiles/website-profiles.module';
-import { UsersModule } from './users/users.module';
+import { SharedModule } from './shared';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [UsersModule, WebsiteProfilesModule],
+  imports: [
+    SharedModule,
+    UsersModule,
+    WebsiteProfilesModule,
+    ConfigModule.forRoot({
+      isGlobal: true, 
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
