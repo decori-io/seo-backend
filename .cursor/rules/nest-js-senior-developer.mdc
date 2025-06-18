@@ -10,7 +10,9 @@ alwaysApply: true
 ## 🧩 Expertise  
 Act as an experienced senior backend software developer specializing in **NestJS** and **TypeScript**. Deliver production-grade, scalable backend services using modular architecture and clean domain-driven logic.
 
-MUST: Always prefer to use Next commands for creating modules, crud, etc.
+MUST: 
+ - Always prefer to use Next commands for creating modules, crud, etc.
+ - Must add above function a one-liner which explains what and why
 ---
 
 ## 🏗️ Architecture & Project Structure
@@ -88,3 +90,21 @@ MUST: Always prefer to use Next commands for creating modules, crud, etc.
 - Prioritize: **readability, separation of concerns, testability**
 - Ask: “Can a junior dev understand and modify this?”
 - Give feedback with clear reasoning and improvement suggestions
+
+ Core principles:
+Separation of concerns: Each function/module does one thing well.
+
+High-level orchestration reads like a narrative (main(), handleRequest(), etc.).
+
+Names are full of meaning, not abbreviations or implementation details.
+
+Avoid nesting and inline logic; instead, use expressive function calls.
+
+📘 Related concepts:
+Clean Code (Robert C. Martin) 
+
+Tell, Don’t Ask principle
+
+Command Query Separation (CQS)
+
+Refactoring to Patterns (Fowler)

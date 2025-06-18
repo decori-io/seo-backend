@@ -14,4 +14,8 @@ export class WebsiteProfilesService {
     const createdProfile = new this.websiteProfileModel(createWebsiteProfileDto);
     return createdProfile.save();
   }
+
+  async findById(id: string): Promise<WebsiteProfileDocument | null> {
+    return this.websiteProfileModel.findById(id).exec();
+  }
 }
