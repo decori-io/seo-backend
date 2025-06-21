@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import * as request from 'supertest';
-import { WebsiteProfilesModule } from '../website-profiles.module';
+import { WebsiteProfilesModule } from '../website-profiles/website-profiles.module';
 import { WorkflowsService } from './workflows.service';
-import { WebsiteProfilesService } from '../website-profiles.service';
-import { CrawlService } from '../../shared/services/crawl.service';
+import { WebsiteProfilesService } from '../website-profiles/website-profiles.service';
+import { CrawlService } from '../shared/services/crawl.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { WebsiteProfile } from '../schemas/website-profile.schema';
+import { WebsiteProfile } from '../website-profiles/schemas/website-profile.schema';
 import { checkCrawlStatusFixture } from 'src/shared/services/crawl.service.fixtures';
 
 describe('WorkflowsController (e2e)', () => {

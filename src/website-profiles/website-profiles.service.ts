@@ -20,4 +20,8 @@ export class WebsiteProfilesService {
   async findById(id: string): Promise<WebsiteProfileDocument | null> {
     return this.websiteProfileModel.findById(id).exec();
   }
+
+  async update(id: string, update: Partial<WebsiteProfile>): Promise<WebsiteProfileDocument | null> {
+    return this.websiteProfileModel.findByIdAndUpdate(id, update, { new: true }).exec();
+  }
 }

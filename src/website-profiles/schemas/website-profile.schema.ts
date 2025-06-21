@@ -7,6 +7,8 @@ export interface IWebsiteProfile {
   userId: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  jobId?: string | null;
+  lastScrapedAt?: Date | null;
 }
 
 export type WebsiteProfileDocument = IWebsiteProfile & Document;
@@ -18,6 +20,12 @@ export class WebsiteProfile {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: false, default: null })
   userId: Types.ObjectId | null;
+
+  @Prop({ type: String, required: false, default: null })
+  jobId?: string | null;
+
+  @Prop({ type: Date, required: false, default: null })
+  lastScrapedAt?: Date | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 
