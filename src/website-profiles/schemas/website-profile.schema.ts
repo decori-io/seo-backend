@@ -16,8 +16,8 @@ export class WebsiteProfile {
   @Prop({ required: true })
   domain: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: false, default: null })
+  userId: Types.ObjectId | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 

@@ -25,7 +25,7 @@ export class WorkflowsService {
 
   private async startScrape(domain: string): Promise<string> {
     try {
-      const { jobId } = await this.crawlService.startCrawl(domain);
+      const { jobId } = await this.crawlService.startCrawl(domain, { maxDepth: 3, limit: 50 });
       return jobId;
     } catch (error) {
       throw new InternalServerErrorException('Failed to start scrape: ' + error.message);

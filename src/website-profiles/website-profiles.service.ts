@@ -11,8 +11,10 @@ export class WebsiteProfilesService {
   ) {}
 
   async create(createWebsiteProfileDto: CreateWebsiteProfileDto): Promise<WebsiteProfileDocument> {
-    const createdProfile = new this.websiteProfileModel(createWebsiteProfileDto);
-    return createdProfile.save();
+    const newProfile = new this.websiteProfileModel(createWebsiteProfileDto);
+    const savedProfile = await newProfile.save();
+
+    return savedProfile;
   }
 
   async findById(id: string): Promise<WebsiteProfileDocument | null> {
