@@ -9,7 +9,8 @@ export class WorkflowsController {
   @Post('scrape_site')
   async scrape(@Body() scrapeRequest: ScrapeRequestDto): Promise<any> {
     try {
-      return await this.workflowsService.scrapeWebsiteWorkflow(scrapeRequest.websiteProfileID);
+      const result =  await this.workflowsService.scrapeWebsiteWorkflow(scrapeRequest.websiteProfileID);
+      return result;
     } catch (error) {
       throw new HttpException(error.message || 'Scrape failed', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
     }

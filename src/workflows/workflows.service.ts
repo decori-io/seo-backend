@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException } from '@ne
 import { WebsiteProfilesService } from '../website-profiles/website-profiles.service';
 import { CrawlService } from '../shared/services/crawl.service';
 import { WebsiteProfileDocument } from '../website-profiles/schemas/website-profile.schema';
+import { CrawlStatusResponse } from '@mendable/firecrawl-js';
 
 @Injectable()
 export class WorkflowsService {
@@ -17,7 +18,7 @@ export class WorkflowsService {
    * @param id - The ID of the website profile.
    * @returns The result of the scrape completion.
    */
-  async scrapeWebsiteWorkflow(id: string): Promise<any /* TODO: fix this */> {
+  async scrapeWebsiteWorkflow(id: string): Promise<CrawlStatusResponse> {
     const profile = await this.fetchWebsiteProfile(id);
     let jobId = profile.jobId;
 
@@ -32,7 +33,7 @@ export class WorkflowsService {
     }
 
     const result = await this.waitForScrapeCompletion(jobId);
-    return result; // TODO: fix this return type
+    return result;
   }
 
   /**
@@ -56,9 +57,9 @@ export class WorkflowsService {
     if (!lastScrapedAt) {
       return false;
     }
-    const tenMinutesInMillis = 10 * 60 * 1000;
+    const timeRange = 7 * 24 * 60 * 60 * 1000; // 7 days
     const timeDifference = new Date().getTime() - new Date(lastScrapedAt).getTime();
-    return timeDifference < tenMinutesInMillis;
+    return timeDifference < timeRange;
   }
 
   /**
@@ -69,7 +70,7 @@ export class WorkflowsService {
    */
   private async startScrape(domain: string): Promise<string> {
     try {
-      const { jobId } = await this.crawlService.startCrawl(domain, { maxDepth: 3, limit: 50 });
+      const { jobId } = await this.crawlService.startCrawl(domain, { maxDepth: 3, limit: 25 });
       return jobId;
     } catch (error) {
       throw new InternalServerErrorException('Failed to start scrape: ' + error.message);
@@ -82,19 +83,16 @@ export class WorkflowsService {
    * @returns The status and data of the completed job.
    * @throws InternalServerErrorException if the job fails, is cancelled, or times out.
    */
-  private async waitForScrapeCompletion(jobId: string): Promise<{ status: string; data?: any }> {
+  private async waitForScrapeCompletion(jobId: string): Promise<CrawlStatusResponse> {
     const timeout = 3 * 60 * 1000; // 3 minutes
     const interval = 3000; // 3 seconds
     const start = Date.now();
     while (Date.now() - start < timeout) {
-      const status = await this.crawlService.checkCrawlStatus(jobId);
-      if (status.status === 'completed') {
-        return {
-          status: status.status,
-          data: status.data,
-        };
+      const response = await this.crawlService.checkCrawlStatus(jobId);
+      if (response.status === 'completed') {
+        return response;
       }
-      if (status.status === 'failed' || status.status === 'cancelled') {
+      if (response.status === 'failed' || response.status === 'cancelled') {
         throw new InternalServerErrorException('Scrape error: Job failed or cancelled');
       }
       await new Promise(res => setTimeout(res, interval));
