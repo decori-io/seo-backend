@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { WebsiteProfilesService } from '../website-profiles/website-profiles.service';
 import { CrawlService } from '../shared/services/crawl.service';
 import { WebsiteProfileDocument } from '../website-profiles/schemas/website-profile.schema';
 import { CrawlStatusResponse } from '@mendable/firecrawl-js';
+import { ScrapedPagesService } from '../scraped-pages/scraped-pages.service';
+import { ScrapedPageDocument } from '../scraped-pages/schemas/scraped-page.schema';
 
 @Injectable()
 export class WorkflowsService {
+  private readonly logger = new Logger(WorkflowsService.name);
   constructor(
     private readonly websiteProfilesService: WebsiteProfilesService,
     private readonly crawlService: CrawlService,
+    private readonly scrapedPagesService: ScrapedPagesService,
   ) {}
 
   /**
@@ -18,7 +22,7 @@ export class WorkflowsService {
    * @param id - The ID of the website profile.
    * @returns The result of the scrape completion.
    */
-  async scrapeWebsiteWorkflow(id: string): Promise<CrawlStatusResponse> {
+  async scrapeWebsiteWorkflow(id: string): Promise<ScrapedPageDocument[]> {
     const profile = await this.fetchWebsiteProfile(id);
     let jobId = profile.jobId;
 
@@ -33,7 +37,20 @@ export class WorkflowsService {
     }
 
     const result = await this.waitForScrapeCompletion(jobId);
-    return result;
+
+    if (!result?.data?.length) {
+      this.logger.warn(`No pages found in scrape result for website ${profile.domain} (${id})`);
+      return [];
+    }
+
+    this.logger.log(`Found ${result.data.length} pages to process for website ${profile.domain} (${id})`);
+    const savedPages = await this.scrapedPagesService.bulkCreateFromFirecrawl(
+      result.data,
+      profile._id,
+    );
+    this.logger.log(`Saved ${savedPages.length} pages for website ${profile.domain} (${id})`);
+
+    return savedPages;
   }
 
   /**
