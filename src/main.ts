@@ -16,6 +16,14 @@ async function bootstrap() {
   // Enable graceful shutdown hooks for proper cleanup
   app.enableShutdownHooks();
   
+  // Enable CORS for development if CORS_ORIGIN is set in env
+  if (process.env.CORS_ORIGIN) {
+    app.enableCors({
+      origin: process.env.CORS_ORIGIN,
+      credentials: true,
+    });
+  }
+  
   // Start the application on the specified port or default to 3000
   await app.listen(process.env.PORT ?? 3000);
 }
