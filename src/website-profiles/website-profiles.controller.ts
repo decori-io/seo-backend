@@ -18,4 +18,12 @@ export class WebsiteProfilesController {
     if (!profile) throw new NotFoundException('WebsiteProfile not found');
     return profile;
   }
+
+  /**
+   * Generates semantic analysis summary for a website profile using scraped content
+   */
+  @Post(':id/generate-summary')
+  async generateSummary(@Param('id') id: string) {
+    return this.websiteProfilesService.generateSummary(id);
+  }
 }

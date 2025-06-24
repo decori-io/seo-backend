@@ -10,6 +10,7 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { ScrapedPagesModule } from './scraped-pages/scraped-pages.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
     ScheduleModule.forRoot(),
     ScrapedPagesModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

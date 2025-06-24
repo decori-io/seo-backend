@@ -9,6 +9,11 @@ export interface IWebsiteProfile {
   updatedAt: Date;
   jobId?: string | null;
   lastScrapedAt?: Date | null;
+  summary?: string | null;
+  valueProps?: string[] | null;
+  intents?: string[] | null;
+  ICPs?: string[] | null;
+  seedKeywords?: string[] | null;
 }
 
 export type WebsiteProfileDocument = IWebsiteProfile & Document;
@@ -26,6 +31,21 @@ export class WebsiteProfile {
 
   @Prop({ type: Date, required: false, default: null })
   lastScrapedAt?: Date | null;
+
+  @Prop({ type: String, required: false, default: null })
+  summary?: string | null;
+
+  @Prop({ type: [String], required: false, default: null })
+  valueProps?: string[] | null;
+
+  @Prop({ type: [String], required: false, default: null })
+  intents?: string[] | null;
+
+  @Prop({ type: [String], required: false, default: null })
+  ICPs?: string[] | null;
+
+  @Prop({ type: [String], required: false, default: null })
+  seedKeywords?: string[] | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 
