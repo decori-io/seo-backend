@@ -35,6 +35,9 @@ export class ScrapeJob {
 
   @Prop({ type: String, default: null })
   jobId?: string | null;
+
+  @Prop({ type: Date, default: null })
+  processingStartedAt?: Date | null;
 }
 
 export const ScrapeJobSchema = SchemaFactory.createForClass(ScrapeJob); 

@@ -9,6 +9,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { ScrapedPagesModule } from './scraped-pages/scraped-pages.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ScrapedPagesModule } from './scraped-pages/scraped-pages.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ScrapedPagesModule,
   ],
   controllers: [AppController],

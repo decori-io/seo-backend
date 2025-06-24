@@ -18,4 +18,7 @@ export class ScrapedPage {
   websiteProfileId: Types.ObjectId;
 }
 
-export const ScrapedPageSchema = SchemaFactory.createForClass(ScrapedPage); 
+export const ScrapedPageSchema = SchemaFactory.createForClass(ScrapedPage);
+
+// Create compound unique index on websiteProfileId + url
+ScrapedPageSchema.index({ websiteProfileId: 1, url: 1 }, { unique: true }); 
