@@ -8,7 +8,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { WorkflowsModule } from './workflows/workflows.module';
 import { ScrapedPagesModule } from './scraped-pages/scraped-pages.module';
 
 @Module({
@@ -16,7 +15,6 @@ import { ScrapedPagesModule } from './scraped-pages/scraped-pages.module';
     SharedModule,
     UsersModule,
     WebsiteProfilesModule,
-    WorkflowsModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
