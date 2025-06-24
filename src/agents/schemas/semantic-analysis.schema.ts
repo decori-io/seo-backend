@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
 export const SemanticAnalysisSchema = z.object({
-  summary: z.string().describe(`Write a natural, human-sounding paragraph as if you're giving friendly, insightful Slack-style feedback. Start with 'So I took a look at...' and include:
-- A compliment on their setup and product range
-- A highlight of standout customer-friendly features (e.g. warranties, trial periods, service quality)
-- Blog content ideas around their product niche (e.g. buying guides, care tips, comparison articles)
-- Quick insight into what their target audience is likely looking for
-
+  summary: z.string().describe(`
+    summary: Write a natural, human-sounding response as if you're giving friendly, insightful Slack-style feedback directly to the business owner. Format as multiple sentence with proper line breaks (\\n\\n between sentence or if sentence is too long), each paragraph (1-2 sentences) should be short and concised.
+ Follow these guidelines:
+- Start with 'So I took a look at [Business Name]...' and use the actual business name throughout
+- First sentence: Compliment the business setup and product/service range, mentioning specific products or services by name
+- Second sentence: Highlight standout customer-friendly features (experience, warranties, trial periods, service quality, unique offerings, etc.)
+- Third sentence: Suggest blog content ideas around the business niche (buying guides, care tips, comparison articles, industry insights)
+- Fourth sentence: Provide insight into what the target audience is likely looking for and how the business can address those needs
 `),
   value_props: z.array(z.string()).describe('7-10 unique, highly specific value propositions (avoid generic or repetitive points; focus on what truly differentiates this product)'),
   intents: z.array(z.string()).describe('7-10 distinct user intents (what are people trying to achieve, solve, or improve by using this product? Be creative and cover a range of motivations)'),
