@@ -14,6 +14,7 @@ export interface IWebsiteProfile {
   intents?: string[] | null;
   ICPs?: string[] | null;
   seedKeywords?: string[] | null;
+  leanKeywords?: string[] | null;
 }
 
 export type WebsiteProfileDocument = IWebsiteProfile & Document;
@@ -46,6 +47,9 @@ export class WebsiteProfile {
 
   @Prop({ type: [String], required: false, default: null })
   seedKeywords?: string[] | null;
+
+  @Prop({ type: [String], required: false, default: null })
+  leanKeywords?: string[] | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 

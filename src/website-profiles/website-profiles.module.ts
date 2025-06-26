@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { WebsiteProfilesService } from './website-profiles.service';
 import { WebsiteProfilesController } from './website-profiles.controller';
@@ -12,7 +12,7 @@ import { AgentsModule } from '../agents/agents.module';
       { name: WebsiteProfile.name, schema: WebsiteProfileSchema },
       { name: ScrapedPage.name, schema: ScrapedPageSchema },
     ]),
-    AgentsModule,
+    forwardRef(() => AgentsModule),
   ],
   controllers: [WebsiteProfilesController],
   providers: [WebsiteProfilesService],
