@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { WebsiteProfile, WebsiteProfileDocument } from './schemas/website-profile.schema';
+import { WebsiteProfile, WebsiteProfileDocument, WebsiteProfilePopulatedDocument } from './schemas/website-profile.schema';
 import { CreateWebsiteProfileDto } from './dto/create-website-profile.dto';
 import { SemanticUnderstandingService } from '../agents/semantic-understanding/semantic-understanding.service';
 import { ScrapedPage, ScrapedPageDocument } from '../scraped-pages/schemas/scraped-page.schema';
@@ -24,6 +24,10 @@ export class WebsiteProfilesService {
 
   async findById(id: string): Promise<WebsiteProfileDocument | null> {
     return this.websiteProfileModel.findById(id).exec();
+  }
+
+  async findByIdWithPopulatedKeywords(id: string): Promise<WebsiteProfilePopulatedDocument | null> {
+    return this.websiteProfileModel.findById(id).populate('seoValidatedKeywords').exec();
   }
 
   async update(id: string, update: Partial<WebsiteProfile>): Promise<WebsiteProfileDocument | null> {

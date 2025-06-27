@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { KeywordDifficulty, Keyword } from './schemas/keyword.schema';
+import { CreateKeywordDto } from './dto/keyword.dto';
 
 // Type definitions matching the Python implementation
 interface KeywordSuggestion {
@@ -15,11 +17,11 @@ interface RapidApiKeywordResponse {
   Questions: KeywordSuggestion[];
 }
 
-interface ProcessedKeyword {
+interface RapidAHRefsKeyword {
   keyword: string;
   searchVolumeStr: string;
   searchVolume: number;
-  difficulty: string;
+  difficulty: KeywordDifficulty; 
   lastUpdated?: string;
 }
 
@@ -31,13 +33,13 @@ export class KeywordsSuggestionsAPI {
   constructor(private readonly configService: ConfigService) {}
 
   /**
-   * Asynchronously fetch recommended keywords from Ahrefs API via RapidAPI
+   * Asynchronously fetch recommended keywords from Ahrefs API via RapidAPI and return as Keyword entities
    */
   async getRecommendedKeywordsAsync(
     seedKeyword: string,
     country: string = 'us',
     searchEngine: string = 'google'
-  ): Promise<ProcessedKeyword[]> {
+  ): Promise<Keyword[]> {
     const rapidApiKey = this.configService.get<string>('RAPIDAPI_KEY');
     
     if (!rapidApiKey) {
@@ -65,9 +67,9 @@ export class KeywordsSuggestionsAPI {
     }
 
     const apiData: RapidApiKeywordResponse = await response.json();
-    const processedData = this.processAhrefsResponse(apiData, seedKeyword);
+    const keywords = this.AhrefsResponseToKeywordsEntity(apiData);
     
-    return processedData;
+    return keywords;
   }
 
   /**
@@ -121,45 +123,46 @@ export class KeywordsSuggestionsAPI {
   }
 
   /**
-   * Map Ahrefs difficulty string to competition level
+   * Map Ahrefs difficulty string to KeywordDifficulty enum
    */
-  private mapCompetitionLevel(difficulty?: string): string {
+  private mapDifficulty(difficulty?: string): KeywordDifficulty {
     if (!difficulty) {
-      return 'HIGH';
+      return KeywordDifficulty.UNKNOWN;
     }
     
-    const difficultyMap: Record<string, string> = {
-      'Easy': 'LOW',
-      'Medium': 'MEDIUM', 
-      'Hard': 'HIGH',
-      'Unknown': 'LOW', // Default to LOW for unknown difficulty
+    const difficultyMap: Record<string, KeywordDifficulty> = {
+      'Easy': KeywordDifficulty.LOW,
+      'Medium': KeywordDifficulty.MEDIUM, 
+      'Hard': KeywordDifficulty.HIGH,
+      'Unknown': KeywordDifficulty.UNKNOWN,
     };
     
-    return difficultyMap[difficulty] || 'LOW';
+    return difficultyMap[difficulty] || KeywordDifficulty.UNKNOWN;
   }
 
   /**
-   * Processes the JSON response from Ahrefs API
+   * Processes the JSON response from Ahrefs API and maps to Keyword entity format
    */
-  private processAhrefsResponse(data: RapidApiKeywordResponse, seedKeyword: string): ProcessedKeyword[] {
-    const results: ProcessedKeyword[] = [];
+  private AhrefsResponseToKeywordsEntity(data: RapidApiKeywordResponse): Keyword[] {
+    const results: Keyword[] = [];
     
     try {
       const allItems = [...(data.Ideas || []), ...(data.Questions || [])];
       
       for (const item of allItems) {
         const volumeStr = item.volume;
-        const processedKeyword: ProcessedKeyword = {
+        const processedKeyword: Keyword = {
           keyword: item.keyword,
-          searchVolumeStr: volumeStr,
           searchVolume: this.mapVolume(volumeStr),
-          difficulty: this.mapCompetitionLevel(item.difficulty),
-          lastUpdated: item.lastUpdated,
+          difficulty: this.mapDifficulty(item.difficulty),
+          lastUpdated: item.lastUpdated ? new Date(item.lastUpdated) : undefined,
+          provider: 'rapidapi-ahrefs',
+          rawSource: item
         };
         results.push(processedKeyword);
       }
     } catch (error) {
-      this.logger.error(`Ahrefs API error for keyword '${seedKeyword}': ${error.message}`);
+      this.logger.error(`Ahrefs API error: ${error.message}`);
     }
     
     return results;

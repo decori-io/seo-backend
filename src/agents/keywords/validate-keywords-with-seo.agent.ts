@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { KeywordsSuggestionsAPI } from './keywords-suggestions-api.service';
 import { KeywordItem } from '../interfaces/keywords-analysis.interface';
 import Bottleneck from 'bottleneck';
+import { Keyword } from './schemas/keyword.schema';
 
 @Injectable()
 export class ValidateKeywordsWithSEO {
@@ -22,7 +23,7 @@ export class ValidateKeywordsWithSEO {
   /**
    * Validates keywords with external SEO API and returns enriched keyword data
    */
-  async getBulkRecommendationsForKeyword(leanKeywords: string[]): Promise<KeywordItem[]> {
+  async getBulkRecommendationsForKeyword(leanKeywords: string[]): Promise<Keyword[]> {
     
     this.logger.debug(`Getting recommendations from Ahrefs API for ${leanKeywords.length} keywords...`);
     
@@ -32,7 +33,7 @@ export class ValidateKeywordsWithSEO {
 
     // Process all keywords with rate limiting (5 requests per second)
     const recommendationPromises = leanKeywords.map(keyword => 
-      this.rateLimiter.schedule(() => this.getRecommendationsForKeyword(keyword))
+      this.rateLimiter.schedule(() => this.keywordsSuggestionsAPI.getRecommendedKeywordsAsync(keyword))
     );
 
     // Use Promise.allSettled for better error handling - failed requests won't break others
@@ -40,7 +41,7 @@ export class ValidateKeywordsWithSEO {
     
     // Extract successful results and flatten
     const allRecommendations = allResults
-      .filter((result): result is PromiseFulfilledResult<KeywordItem[]> => result.status === 'fulfilled')
+      .filter((result): result is PromiseFulfilledResult<Keyword[]> => result.status === 'fulfilled')
       .flatMap(result => result.value)
       .filter(Boolean);
 
@@ -51,50 +52,53 @@ export class ValidateKeywordsWithSEO {
     return processedKeywords;
   }
 
-  /**
-   * Get recommendations for a single keyword with proper error handling
-   */
-  public async getRecommendationsForKeyword(keyword: string): Promise<KeywordItem[]> {
-    return await this.getAhrefsRecommendations(keyword);
-  }
+
 
   /**
    * Process and refine keyword recommendations using functional programming patterns
    */
-  private processRecommendations(recommendations: KeywordItem[], minVolume = 100): KeywordItem[] {
+  private processRecommendations(recommendations: Keyword[], minVolume = 100): Keyword[] {
     return recommendations
-      .filter(kw => kw.search_volume >= minVolume)                    // Filter by minimum volume
-      .sort(this.compareKeywords)                                     // Sort by quality score
+      .filter(kw => kw.searchVolume >= minVolume)                     // Filter by minimum volume
       .filter(this.createDeduplicationFilter())                      // Deduplicate
+      .sort(this.compareKeywords)                                     // Sort by quality score (final step)
   }
 
   /**
-   * Calculate weighted score for keyword using tiered approach (matching Python implementation)
+   * Calculate weighted score for keyword using tiered approach
+   * Score based on volume and difficulty only (no competition field)
    * Keywords with volume below MIN_SIGNIFICANT_VOLUME are deprioritized
-   * Significant keywords are tiered by competition (LOW > MEDIUM > HIGH)
+   * Significant keywords are tiered by difficulty (LOW > MEDIUM > HIGH)
    */
-  private scoreKeyword = (keyword: KeywordItem): number => {
+  public scoreKeyword = (keyword: Keyword): number => {
     const MIN_SIGNIFICANT_VOLUME = 1000;
     const TIER_MULTIPLIER = 10_000_000; // Large multiplier ensures tier is primary sorting factor
     
-    const volume = keyword.search_volume || 0;
-    const competition = keyword.competition || 0.5;
+    const volume = keyword.searchVolume || 0;
+    const difficulty = keyword.difficulty;
     
-    // Determine tier score based on volume and competition
+    // Determine tier score based on volume and difficulty
     let tierScore: number;
     
     if (volume < MIN_SIGNIFICANT_VOLUME) {
       // Insignificant keywords are placed in tier below all others
       tierScore = -1;
     } else {
-      // Significant keywords are tiered by competition (lower competition = higher tier)
-      // competition ranges 0-1: LOW (0-0.4), MEDIUM (0.4-0.7), HIGH (0.7-1)
-      if (competition <= 0.4) {
-        tierScore = 2; // LOW competition
-      } else if (competition <= 0.7) {
-        tierScore = 1; // MEDIUM competition  
-      } else {
-        tierScore = 0; // HIGH competition
+      // Significant keywords are tiered by difficulty (lower difficulty = higher tier)
+      switch (difficulty) {
+        case 'LOW':
+          tierScore = 2; // LOW difficulty - easiest to rank for
+          break;
+        case 'MEDIUM':
+          tierScore = 1; // MEDIUM difficulty
+          break;
+        case 'HIGH':
+          tierScore = 0; // HIGH difficulty - hardest to rank for
+          break;
+        case 'UNKNOWN':
+        default:
+          tierScore = 0; // Default to lowest tier for unknown difficulty
+          break;
       }
     }
     
@@ -105,7 +109,7 @@ export class ValidateKeywordsWithSEO {
   /**
    * Keyword comparison function for sorting using tiered scoring approach
    */
-  private compareKeywords = (a: KeywordItem, b: KeywordItem): number => {
+  private compareKeywords = (a: Keyword, b: Keyword): number => {
     return this.scoreKeyword(b) - this.scoreKeyword(a); // Higher score first
   };
 
@@ -114,7 +118,7 @@ export class ValidateKeywordsWithSEO {
    */
   private createDeduplicationFilter() {
     const seen = new Set<string>();
-    return (keyword: KeywordItem): boolean => {
+    return (keyword: Keyword): boolean => {
       if (seen.has(keyword.keyword)) {
         return false;
       }
@@ -123,48 +127,7 @@ export class ValidateKeywordsWithSEO {
     };
   }
 
-  /**
-   * Fetch keyword recommendations from Ahrefs API via RapidAPI
-   */
-  private async getAhrefsRecommendations(keyword: string): Promise<KeywordItem[]> {
-    const recommendations = await this.keywordsSuggestionsAPI.getRecommendedKeywordsAsync(keyword);
-    
-    // Transform the response to our KeywordItem format
-    return recommendations.map(item => ({
-      keyword: item.keyword,
-      search_volume: item.searchVolume,
-      difficulty: this.mapDifficultyToNumber(item.difficulty),
-      cpc: 0, // Ahrefs doesn't provide CPC data
-      competition: this.mapCompetitionToNumber(item.difficulty),
-    }));
-  }
 
-  /**
-   * Map difficulty string to numeric value (0-100)
-   */
-  private mapDifficultyToNumber(difficulty: string): number {
-    const difficultyMap: Record<string, number> = {
-      'Easy': 25,
-      'Medium': 50,
-      'Hard': 75,
-      'Unknown': 40,
-    };
-    
-    return difficultyMap[difficulty] || 40;
-  }
-
-  /**
-   * Map competition level to numeric value (0-1)
-   */
-  private mapCompetitionToNumber(competitionLevel: string): number {
-    const competitionMap: Record<string, number> = {
-      'LOW': 0.3,
-      'MEDIUM': 0.6,
-      'HIGH': 0.9,
-    };
-    
-    return competitionMap[competitionLevel] || 0.5;
-  }
 
 
 
@@ -172,29 +135,42 @@ export class ValidateKeywordsWithSEO {
    * Filter keywords by search volume and difficulty thresholds
    */
   filterKeywordsByThresholds(
-    keywords: KeywordItem[],
+    keywords: Keyword[],
     minSearchVolume: number = 100,
     maxDifficulty: number = 80
-  ): KeywordItem[] {
+  ): Keyword[] {
     return keywords.filter(
       keyword => 
-        keyword.search_volume >= minSearchVolume && 
-        keyword.difficulty <= maxDifficulty
+        keyword.searchVolume >= minSearchVolume && 
+        ['LOW', 'MEDIUM'].includes(keyword.difficulty) // Filter to easy/medium difficulty only
     );
   }
 
   /**
    * Group keywords by difficulty level for better organization
    */
-  groupKeywordsByDifficulty(keywords: KeywordItem[]): {
-    easy: KeywordItem[];      // 0-30 difficulty
-    medium: KeywordItem[];    // 31-60 difficulty
-    hard: KeywordItem[];      // 61-100 difficulty
+  groupKeywordsByDifficulty(keywords: Keyword[]): {
+    easy: Keyword[];      // 0-30 difficulty
+    medium: Keyword[];    // 31-60 difficulty
+    hard: Keyword[];      // 61-100 difficulty
   } {
     return {
-      easy: keywords.filter(kw => kw.difficulty <= 30),
-      medium: keywords.filter(kw => kw.difficulty > 30 && kw.difficulty <= 60),
-      hard: keywords.filter(kw => kw.difficulty > 60),
+      easy: keywords.filter(kw => kw.difficulty === 'LOW'),
+      medium: keywords.filter(kw => kw.difficulty === 'MEDIUM'),
+      hard: keywords.filter(kw => kw.difficulty === 'HIGH'),
     };
+  }
+
+  /**
+   * Public method to sort keywords by score for testing and external use
+   * Adds ourScore to each keyword for transparency
+   */
+  public sortKeywordsByScore(keywords: Keyword[]): Keyword[] {
+    return [...keywords]
+      .map(keyword => ({
+        ...keyword,
+        ourScore: this.scoreKeyword(keyword), // Add our calculated score
+      }))
+      .sort(this.compareKeywords);
   }
 } 

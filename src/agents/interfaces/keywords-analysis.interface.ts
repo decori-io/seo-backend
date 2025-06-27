@@ -6,8 +6,8 @@ export interface KeywordItem {
   keyword: string;
   search_volume: number;
   difficulty: number;
-  cpc: number;
   competition: number;
+  ourScore?: number; // Our calculated score for sorting
 }
 
 export interface ICPLongTailKeywords {

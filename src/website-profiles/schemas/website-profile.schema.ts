@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, PopulatedDoc } from 'mongoose';
+import { KeywordDocument } from '../../agents/keywords/schemas/keyword.schema';
 
 export interface IWebsiteProfile {
   _id: Types.ObjectId;
@@ -15,9 +16,17 @@ export interface IWebsiteProfile {
   ICPs?: string[] | null;
   seedKeywords?: string[] | null;
   leanKeywords?: string[] | null;
+  // References to validated keywords from third-party SEO data providers
+  seoValidatedKeywords?: Types.ObjectId[] | null;
+}
+
+// Interface for populated website profile (when keywords are populated)
+export interface IWebsiteProfilePopulated extends Omit<IWebsiteProfile, 'seoValidatedKeywords'> {
+  seoValidatedKeywords?: PopulatedDoc<KeywordDocument>[] | null;
 }
 
 export type WebsiteProfileDocument = IWebsiteProfile & Document;
+export type WebsiteProfilePopulatedDocument = IWebsiteProfilePopulated & Document;
 
 @Schema({ timestamps: true })
 export class WebsiteProfile {
@@ -50,6 +59,14 @@ export class WebsiteProfile {
 
   @Prop({ type: [String], required: false, default: null })
   leanKeywords?: string[] | null;
+
+  // References to validated keywords from third-party SEO data providers
+  @Prop({ 
+    type: [{ type: Types.ObjectId, ref: 'Keyword' }], 
+    required: false, 
+    default: null 
+  })
+  seoValidatedKeywords?: Types.ObjectId[] | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 

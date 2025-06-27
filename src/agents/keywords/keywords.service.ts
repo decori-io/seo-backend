@@ -1,14 +1,13 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Types } from 'mongoose';
 import OpenAI from 'openai';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import { KeywordsAnalysisSchema, KeywordsAnalysisResponse } from '../schemas/keywords-analysis.schema';
-import { KeywordsAnalysisResult, KeywordItem, ICPLongTailKeywords } from '../interfaces/keywords-analysis.interface';
 import { WebsiteProfilesService } from '../../website-profiles/website-profiles.service';
+import { ICPLongTailKeywords, KeywordItem, KeywordsAnalysisResult } from '../interfaces/keywords-analysis.interface';
 import { ExpandKeywordsWithAI } from './expand-keywords-with-ai.agent';
+import { KeywordEntityService } from './keyword-entity.service';
+import { Keyword } from './schemas/keyword.schema';
 import { ValidateKeywordsWithSEO } from './validate-keywords-with-seo.agent';
-
-
 
 @Injectable()
 export class KeywordsService {
@@ -20,6 +19,7 @@ export class KeywordsService {
     private readonly websiteProfilesService: WebsiteProfilesService,
     private readonly expandKeywordsAgent: ExpandKeywordsWithAI,
     private readonly validateKeywordsAgent: ValidateKeywordsWithSEO,
+    private readonly keywordEntityService: KeywordEntityService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     this.openai = new OpenAI({ apiKey });
@@ -54,33 +54,55 @@ export class KeywordsService {
       this.logger.debug('Step 1: Generating lean seed keywords...');
       const leanKeywords = await this.GenerateLeanKeywords(websiteProfileId, seedKeywords);
 
-      // Step 2: Validate keywords with external API (mocked for now)
-      this.logger.debug('Step 2: Validating keywords with SEO data...');
-      const validatedKeywords = await this.validateKeywordsAgent.getBulkRecommendationsForKeyword(leanKeywords);
-
+      // Step 2: Generate and cache validated keywords
+      this.logger.debug('Step 2: Generating validated keywords...');
+      const validatedKeywords = await this.GenerateValidatedKeywords(websiteProfileId, leanKeywords);
+      
       // Step 3: Generate ICP-specific long-tail queries
-      this.logger.debug('Step 3: Generating ICP-specific long-tail queries...');
-      const icpLongTail = await this.generateICPLongTail(validatedKeywords, ICPs);
+      // this.logger.debug('Step 3: Generating ICP-specific long-tail queries...');
+      // const icpLongTail = await this.generateICPLongTail(validatedKeywords, ICPs);
 
-      const result: KeywordsAnalysisResult = {
-        lean_keywords: leanKeywords,
-        validated_keywords: validatedKeywords,
-        icp_long_tail: icpLongTail,
-        business_context: JSON.stringify({summary, seedKeywords, ICPs}, null, 2),
-        final_keywords: {
-          validated_lean_keywords: validatedKeywords.slice(0, 40),
-          icp_specific_long_tail: icpLongTail,
-        },
-      };
+      // const result: KeywordsAnalysisResult = {
+      //   lean_keywords: leanKeywords,
+      //   validated_keywords: validatedKeywords,
+      //   icp_long_tail: icpLongTail,
+      //   business_context: JSON.stringify({summary, seedKeywords, ICPs}, null, 2),
+      //   final_keywords: {
+      //     validated_lean_keywords: validatedKeywords.slice(0, 40),
+      //     icp_specific_long_tail: icpLongTail,
+      //   },
+      // };
 
-      this.logger.debug('Finished keyword orchestration flow.');
-      return result;
+      // this.logger.debug('Finished keyword orchestration flow.');
+      // return result
+      return {} as any;
     } catch (error) {
       this.logger.error('Error in keyword orchestration:', error);
       throw error;
     }
   }
 
+  /**
+   * Persists validated keywords using upsert and returns their ObjectIds
+   */
+  private async persistValidatedKeywords(validatedKeywords: Keyword[]): Promise<Types.ObjectId[]> {
+    const keywordObjectIds: Types.ObjectId[] = [];
+    
+    for (const keyword of validatedKeywords) {
+      try {
+        // Upsert the keyword
+        const persistedKeyword = await this.keywordEntityService.upsert(keyword);
+        keywordObjectIds.push(persistedKeyword._id as Types.ObjectId);
+      } catch (error) {
+        this.logger.error(`Failed to persist keyword "${keyword.keyword}":`, error);
+        // Continue with other keywords even if one fails
+      }
+    }
+    
+    this.logger.debug(`Persisted ${keywordObjectIds.length} out of ${validatedKeywords.length} keywords`);
+    return keywordObjectIds;
+  }
+  
   /**
    * Generates or retrieves cached lean keywords for a website profile
    */
@@ -119,6 +141,51 @@ export class KeywordsService {
 
     this.logger.debug(`Generated and cached ${leanKeywords.length} lean keywords for website profile ${websiteProfileId}`);
     return leanKeywords;
+  }
+
+  /**
+   * Generates or retrieves cached validated keywords for a website profile
+   */
+  async GenerateValidatedKeywords(websiteProfileId: string, leanKeywords?: string[]): Promise<Keyword[]> {
+    this.logger.debug(`Generating validated keywords for website profile ${websiteProfileId}...`);
+    
+    // Step 1: Fetch website profile with populated keywords
+    const websiteProfile = await this.websiteProfilesService.findByIdWithPopulatedKeywords(websiteProfileId);
+    
+    if (!websiteProfile) {
+      throw new NotFoundException(`Website profile with ID ${websiteProfileId} not found`);
+    }
+
+    // Step 2: Check if validated keywords already exist
+    if (websiteProfile.seoValidatedKeywords && websiteProfile.seoValidatedKeywords.length > 0) {
+      this.logger.debug(`Using cached validated keywords for website profile ${websiteProfileId}`);
+      // Filter out any undefined populated documents and cast to Keyword[]
+      return websiteProfile.seoValidatedKeywords as Keyword[];
+    }
+
+    // Step 3: Generate validated keywords if not cached
+    this.logger.debug(`Generating new validated keywords... for website profile ${websiteProfileId}`);
+    
+    // Use provided leanKeywords or fall back to profile's leanKeywords
+    const keywordsToValidate = leanKeywords || websiteProfile.leanKeywords;
+    
+    if (!keywordsToValidate || keywordsToValidate.length === 0) {
+      throw new BadRequestException('No lean keywords provided and website profile does not have lean keywords');
+    }
+
+    // Step 4: Validate keywords with external API
+    const validatedKeywords = await this.validateKeywordsAgent.getBulkRecommendationsForKeyword(keywordsToValidate);
+    
+    // Step 5: Persist validated keywords and get their ObjectIds
+    const keywordObjectIds = await this.persistValidatedKeywords(validatedKeywords);
+    
+    // Step 6: Save keyword ObjectIds to the website profile
+    await this.websiteProfilesService.update(websiteProfileId, {
+      seoValidatedKeywords: keywordObjectIds,
+    });
+
+    this.logger.debug(`Generated and cached ${validatedKeywords.length} validated keywords for website profile ${websiteProfileId}`);
+    return validatedKeywords;
   }
 
   /**

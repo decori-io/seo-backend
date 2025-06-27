@@ -2,4 +2,7 @@ export * from './keywords.service';
 export * from './keywords.controller';
 export * from './expand-keywords-with-ai.agent';
 export * from './validate-keywords-with-seo.agent';
-export * from './keywords-suggestions-api.service'; 
+export * from './keywords-suggestions-api.service';
+export * from './keyword-entity.service';
+export * from './schemas/keyword.schema';
+export * from './dto/keyword.dto'; 
