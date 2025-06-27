@@ -17,6 +17,7 @@ export interface ICPLongTailKeywords {
 export interface KeywordsAnalysisResult {
   lean_keywords: string[];
   validated_keywords: KeywordItem[];
+  relevant_keywords: KeywordItem[];
   icp_long_tail: ICPLongTailKeywords;
   business_context: string;
   final_keywords: {

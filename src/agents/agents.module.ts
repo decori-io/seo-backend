@@ -7,6 +7,7 @@ import { KeywordsService } from './keywords/keywords.service';
 import { KeywordsController } from './keywords/keywords.controller';
 import { ExpandKeywordsWithAI } from './keywords/expand-keywords-with-ai.agent';
 import { ValidateKeywordsWithSEO } from './keywords/validate-keywords-with-seo.agent';
+import { FilterKeywordsRelevancy } from './keywords/filter-keywords-relevancy.agent';
 import { KeywordsSuggestionsAPI } from './keywords/keywords-suggestions-api.service';
 import { KeywordEntityService } from './keywords/keyword-entity.service';
 import { Keyword, KeywordSchema } from './keywords/schemas/keyword.schema';
@@ -23,7 +24,8 @@ import { WebsiteProfilesModule } from '../website-profiles/website-profiles.modu
     KeywordsService, 
     KeywordEntityService,
     ExpandKeywordsWithAI, 
-    ValidateKeywordsWithSEO, 
+    ValidateKeywordsWithSEO,
+    FilterKeywordsRelevancy,
     KeywordsSuggestionsAPI
   ],
   controllers: [SemanticUnderstandingController, KeywordsController],
@@ -32,7 +34,8 @@ import { WebsiteProfilesModule } from '../website-profiles/website-profiles.modu
     KeywordsService, 
     KeywordEntityService,
     ExpandKeywordsWithAI, 
-    ValidateKeywordsWithSEO, 
+    ValidateKeywordsWithSEO,
+    FilterKeywordsRelevancy,
     KeywordsSuggestionsAPI
   ],
 })

@@ -31,4 +31,12 @@ export class KeywordsController {
   async getValidatedKeywords(@Param('websiteProfileId') websiteProfileId: string): Promise<Keyword[]> {
     return this.keywordsService.GenerateValidatedKeywords(websiteProfileId);
   }
+
+  /**
+   * Filters validated keywords to return only those relevant to the business using AI analysis
+   */
+  @Get('relevant-keywords/:websiteProfileId')
+  async getRelevantKeywords(@Param('websiteProfileId') websiteProfileId: string): Promise<Keyword[]> {
+    return this.keywordsService.FilterRelevantKeywords(websiteProfileId);
+  }
 } 

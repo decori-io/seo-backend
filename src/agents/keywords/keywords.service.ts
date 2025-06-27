@@ -5,8 +5,10 @@ import OpenAI from 'openai';
 import { WebsiteProfilesService } from '../../website-profiles/website-profiles.service';
 import { ICPLongTailKeywords, KeywordItem, KeywordsAnalysisResult } from '../interfaces/keywords-analysis.interface';
 import { ExpandKeywordsWithAI } from './expand-keywords-with-ai.agent';
+import { FilterKeywordsRelevancy } from './filter-keywords-relevancy.agent';
 import { KeywordEntityService } from './keyword-entity.service';
-import { Keyword } from './schemas/keyword.schema';
+import { Keyword, KeywordDocument } from './schemas/keyword.schema';
+import { sortKeywordsByScore } from './utils/keyword-scoring.util';
 import { ValidateKeywordsWithSEO } from './validate-keywords-with-seo.agent';
 
 @Injectable()
@@ -19,6 +21,7 @@ export class KeywordsService {
     private readonly websiteProfilesService: WebsiteProfilesService,
     private readonly expandKeywordsAgent: ExpandKeywordsWithAI,
     private readonly validateKeywordsAgent: ValidateKeywordsWithSEO,
+    private readonly filterRelevancyAgent: FilterKeywordsRelevancy,
     private readonly keywordEntityService: KeywordEntityService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -58,23 +61,27 @@ export class KeywordsService {
       this.logger.debug('Step 2: Generating validated keywords...');
       const validatedKeywords = await this.GenerateValidatedKeywords(websiteProfileId, leanKeywords);
       
-      // Step 3: Generate ICP-specific long-tail queries
-      // this.logger.debug('Step 3: Generating ICP-specific long-tail queries...');
-      // const icpLongTail = await this.generateICPLongTail(validatedKeywords, ICPs);
+      // Step 3: Filter keywords for relevancy
+      this.logger.debug('Step 3: Filtering keywords for relevancy...');
+      const relevantKeywords = await this.FilterRelevantKeywords(websiteProfileId, validatedKeywords);
+      
+      // Step 4: Generate ICP-specific long-tail queries
+      // this.logger.debug('Step 4: Generating ICP-specific long-tail queries...');
+      // const icpLongTail = await this.generateICPLongTail(relevantKeywords, ICPs);
 
-      // const result: KeywordsAnalysisResult = {
-      //   lean_keywords: leanKeywords,
-      //   validated_keywords: validatedKeywords,
-      //   icp_long_tail: icpLongTail,
-      //   business_context: JSON.stringify({summary, seedKeywords, ICPs}, null, 2),
-      //   final_keywords: {
-      //     validated_lean_keywords: validatedKeywords.slice(0, 40),
-      //     icp_specific_long_tail: icpLongTail,
-      //   },
-      // };
+      //         const result: KeywordsAnalysisResult = {
+      //     lean_keywords: leanKeywords,
+      //     validated_keywords: this.convertKeywordsToKeywordItems(validatedKeywords),
+      //     relevant_keywords: this.convertKeywordsToKeywordItems(relevantKeywords),
+      //     icp_long_tail: icpLongTail,
+      //     business_context: JSON.stringify({summary, seedKeywords, ICPs}, null, 2),
+      //     final_keywords: {
+      //       validated_lean_keywords: this.convertKeywordsToKeywordItems(relevantKeywords.slice(0, 40)),
+      //       icp_specific_long_tail: icpLongTail,
+      //     },
+      //   };
 
-      // this.logger.debug('Finished keyword orchestration flow.');
-      // return result
+      this.logger.debug('Finished keyword orchestration flow.');
       return {} as any;
     } catch (error) {
       this.logger.error('Error in keyword orchestration:', error);
@@ -189,10 +196,60 @@ export class KeywordsService {
   }
 
   /**
+   * Filters or retrieves cached relevant keywords for a website profile
+   */
+  async FilterRelevantKeywords(websiteProfileId: string, validatedKeywords?: Keyword[]): Promise<Keyword[]> {
+    this.logger.debug(`Filtering relevant keywords for website profile ${websiteProfileId}...`);
+    
+    // Step 1: Fetch website profile
+    const websiteProfile = await this.websiteProfilesService.findById(websiteProfileId);
+    
+    if (!websiteProfile) {
+      throw new NotFoundException(`Website profile with ID ${websiteProfileId} not found`);
+    }
+
+    // Step 2: Check if relevant keywords already exist (future caching implementation)
+    // For now, always filter to ensure fresh relevancy check
+    
+    // Step 3: Filter keywords if not cached
+    this.logger.debug('Filtering keywords for relevancy...');
+    
+    // Use provided validatedKeywords or fetch from profile
+    const keywordsTmp = validatedKeywords || await this.GenerateValidatedKeywords(websiteProfileId);
+    // If keyword is a Document, convert it to an object
+    const keywordsToFilter = sortKeywordsByScore(keywordsTmp.map(keyword => (keyword as KeywordDocument).toObject()  ? (keyword as KeywordDocument).toObject() : keyword));
+
+    if (!keywordsToFilter || keywordsToFilter.length === 0) {
+      this.logger.warn('No validated keywords to filter for relevancy');
+      return [];
+    }
+
+    // Prepare business context for filtering
+    const businessContext = {
+      summary: websiteProfile.summary || '',
+      icps: websiteProfile.ICPs || [],
+      domain: websiteProfile.domain,
+    };
+
+    // Filter keywords using AI agent
+    const filterResult = await this.filterRelevancyAgent.filterRelevantKeywords(
+      keywordsToFilter,
+      businessContext
+    );
+
+    this.logger.debug(`Filtered to ${filterResult.relevantKeywords.length}/${keywordsToFilter.length} relevant keywords`);
+    // Sort relevant keywords using the keyword sorting utility
+    const sortedRelevantKeywords = sortKeywordsByScore(filterResult.relevantKeywords);
+    
+    this.logger.debug(`Sorted ${sortedRelevantKeywords.length} relevant keywords by priority`);
+    return sortedRelevantKeywords;
+  }
+
+  /**
    * Generates ICP-specific long-tail keyword queries
    */
   private async generateICPLongTail(
-    validatedKeywords: KeywordItem[],
+    validatedKeywords: Keyword[],
     icps: string[]
   ): Promise<ICPLongTailKeywords> {
     const icpLongTail: ICPLongTailKeywords = {};
@@ -201,9 +258,9 @@ export class KeywordsService {
       icpLongTail[icp] = [];
       const topKeywords = validatedKeywords.slice(0, 15);
 
-      for (const keywordItem of topKeywords) {
+      for (const keyword of topKeywords) {
         const prompt = `Generate 2-3 long-tail search queries for the ICP '${icp}' 
-based on the keyword '${keywordItem.keyword}'. 
+based on the keyword '${keyword.keyword}'. 
 Make them specific to this audience. 
 Examples: 
 - 'consulting' → 'startup consulting for ${icp}' 
@@ -226,12 +283,49 @@ Return as a JSON object with "queries" array.`;
             icpLongTail[icp].push(...queries.slice(0, 3));
           }
         } catch (error) {
-          this.logger.warn(`Error generating ICP long-tail for ${icp} and ${keywordItem.keyword}:`, error);
-          icpLongTail[icp].push(`${keywordItem.keyword} for ${icp}`);
+          this.logger.warn(`Error generating ICP long-tail for ${icp} and ${keyword.keyword}:`, error);
+          icpLongTail[icp].push(`${keyword.keyword} for ${icp}`);
         }
       }
     }
 
     return icpLongTail;
+  }
+
+  /**
+   * Converts Keyword objects to KeywordItem objects for interface compatibility
+   */
+  private convertKeywordsToKeywordItems(keywords: Keyword[]): KeywordItem[] {
+    return keywords.map(keyword => ({
+      keyword: keyword.keyword,
+      search_volume: keyword.searchVolume,
+      difficulty: this.mapDifficultyToNumber(keyword.difficulty),
+      competition: 0, // Default value since Keyword schema doesn't have competition
+      ourScore: keyword.searchVolume * this.getDifficultyMultiplier(keyword.difficulty),
+    }));
+  }
+
+  /**
+   * Maps KeywordDifficulty enum to number for KeywordItem interface
+   */
+  private mapDifficultyToNumber(difficulty: string): number {
+    switch (difficulty) {
+      case 'LOW': return 25;
+      case 'MEDIUM': return 50;
+      case 'HIGH': return 75;
+      default: return 50; // UNKNOWN defaults to medium
+    }
+  }
+
+  /**
+   * Gets multiplier for our scoring based on difficulty
+   */
+  private getDifficultyMultiplier(difficulty: string): number {
+    switch (difficulty) {
+      case 'LOW': return 1.5;
+      case 'MEDIUM': return 1.0;
+      case 'HIGH': return 0.5;
+      default: return 1.0;
+    }
   }
 } 
