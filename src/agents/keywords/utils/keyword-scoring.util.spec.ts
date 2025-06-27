@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ValidateKeywordsWithSEO } from './validate-keywords-with-seo.agent';
-import { KeywordsSuggestionsAPI } from './keywords-suggestions-api.service';
-import { Keyword, KeywordDifficulty } from './schemas/keyword.schema';
+import { ValidateKeywordsWithSEO } from '../validate-keywords-with-seo.agent';
+import { KeywordsSuggestionsAPI } from '../keywords-suggestions-api.service';
+import { Keyword, KeywordDifficulty } from '../schemas/keyword.schema';
+import { scoreKeyword, sortKeywordsByScore } from './keyword-scoring.util';
 
 describe('ValidateKeywordsWithSEO - Hybrid Keyword Scoring', () => {
   let service: ValidateKeywordsWithSEO;
@@ -46,7 +47,7 @@ describe('ValidateKeywordsWithSEO - Hybrid Keyword Scoring', () => {
        */
       
       // Act
-      const sortedKeywords = service.sortKeywordsByScore(testKeywords);
+      const sortedKeywords = sortKeywordsByScore(testKeywords);
       
       // Assert
       const actualOrder = sortedKeywords.map(kw => kw.keyword);
@@ -77,10 +78,10 @@ describe('ValidateKeywordsWithSEO - Hybrid Keyword Scoring', () => {
       const highDifficultyKeyword: Keyword = { keyword: 'test', searchVolume: 5000, difficulty: KeywordDifficulty.HIGH };
       const lowVolumeKeyword: Keyword = { keyword: 'test', searchVolume: 500, difficulty: KeywordDifficulty.LOW };
 
-      const lowScore = service.scoreKeyword(lowDifficultyKeyword);
-      const mediumScore = service.scoreKeyword(mediumDifficultyKeyword);
-      const highScore = service.scoreKeyword(highDifficultyKeyword);
-      const lowVolumeScore = service.scoreKeyword(lowVolumeKeyword);
+      const lowScore = scoreKeyword(lowDifficultyKeyword);
+      const mediumScore = scoreKeyword(mediumDifficultyKeyword);
+      const highScore = scoreKeyword(highDifficultyKeyword);
+      const lowVolumeScore = scoreKeyword(lowVolumeKeyword);
 
       // Low difficulty should score highest among significant volumes
       expect(lowScore).toBeGreaterThan(mediumScore);
@@ -91,7 +92,7 @@ describe('ValidateKeywordsWithSEO - Hybrid Keyword Scoring', () => {
     });
 
     it('should add ourScore to keywords when sorting', () => {
-      const sortedKeywords = service.sortKeywordsByScore(testKeywords);
+      const sortedKeywords = sortKeywordsByScore(testKeywords);
       
       // All keywords should have ourScore added
       sortedKeywords.forEach((keyword: any) => {

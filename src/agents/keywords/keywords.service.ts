@@ -234,17 +234,4 @@ Return as a JSON object with "queries" array.`;
 
     return icpLongTail;
   }
-
-  /**
-   * Returns mock AI summary for testing purposes
-   */
-  private async getMockAiSummary() {
-    return {
-      summary: "A business focused on providing services...",
-      value_props: ["Unique value proposition 1", "Unique value proposition 2"],
-      intents: ["Intent 1", "Intent 2"],
-      ICPs: ["tech founders", "startup teams", "entrepreneurs"],
-      seed_keywords: ["consulting", "business advice", "startup help"],
-    };
-  }
 } 
