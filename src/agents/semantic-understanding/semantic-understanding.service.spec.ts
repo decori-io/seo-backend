@@ -47,7 +47,8 @@ describe('SemanticUnderstandingService', () => {
   it('should handle string context input', async () => {
     // Create a valid response that matches our Zod schema
     const validResponse = {
-      summary: 'Test product summary',
+      shortAbout: 'Test product short about',
+      business_overview: 'Test business overview',
       value_props: ['Test value prop 1', 'Test value prop 2'],
       intents: ['Test intent 1', 'Test intent 2'],
       ICPs: ['Test ICP 1', 'Test ICP 2'],
@@ -70,7 +71,8 @@ describe('SemanticUnderstandingService', () => {
 
     expect(result).toBeDefined();
     expect(result.ai_summary).toBeDefined();
-    expect(result.ai_summary.summary).toBe('Test product summary');
+    expect(result.ai_summary.shortAbout).toBe('Test product short about');
+    expect(result.ai_summary.business_overview).toBe('Test business overview');
     expect(Array.isArray(result.ai_summary.value_props)).toBe(true);
     expect(Array.isArray(result.ai_summary.intents)).toBe(true);
     expect(Array.isArray(result.ai_summary.ICPs)).toBe(true);
@@ -80,7 +82,8 @@ describe('SemanticUnderstandingService', () => {
   it('should handle object context input by stringifying it', async () => {
     // Create a valid response that matches our Zod schema
     const validResponse = {
-      summary: 'Test product summary',
+      shortAbout: 'Test product short about',
+      business_overview: 'Test business overview',
       value_props: ['Test value prop'],
       intents: ['Test intent'],
       ICPs: ['Test ICP'],
@@ -109,14 +112,7 @@ describe('SemanticUnderstandingService', () => {
     // Mock OpenAI to throw an error
     mockOpenAI.chat.completions.create.mockRejectedValue(new Error('API Error'));
 
-    const result = await service.semanticUnderstanding('Test content');
-
-    expect(result).toBeDefined();
-    expect(result.ai_summary.summary).toContain('ERROR:');
-    expect(result.ai_summary.value_props).toEqual([]);
-    expect(result.ai_summary.intents).toEqual([]);
-    expect(result.ai_summary.ICPs).toEqual([]);
-    expect(result.ai_summary.seed_keywords).toEqual([]);
+    await expect(service.semanticUnderstanding('Test content')).rejects.toThrow('API Error');
   });
 
   it('should handle OpenAI refusal', async () => {
@@ -132,17 +128,14 @@ describe('SemanticUnderstandingService', () => {
 
     mockOpenAI.chat.completions.create.mockResolvedValue(mockCompletion);
 
-    const result = await service.semanticUnderstanding('Test content');
-
-    expect(result).toBeDefined();
-    expect(result.ai_summary.summary).toContain('ERROR:');
-    expect(result.ai_summary.summary).toContain('OpenAI refused request');
+    await expect(service.semanticUnderstanding('Test content')).rejects.toThrow('OpenAI refused request: Content policy violation');
   });
 
   it('should validate response against Zod schema', () => {
     // Test that our schema validates correctly
     const validData = {
-      summary: 'Test summary',
+      shortAbout: 'Test short about',
+      business_overview: 'Test business overview',
       value_props: ['prop1', 'prop2'],
       intents: ['intent1', 'intent2'],
       ICPs: ['icp1', 'icp2'],
@@ -155,7 +148,7 @@ describe('SemanticUnderstandingService', () => {
   it('should reject invalid data with Zod schema', () => {
     // Test that our schema rejects invalid data
     const invalidData = {
-      summary: 'Test summary',
+      shortAbout: 'Test short about',
       // Missing required fields
     };
 

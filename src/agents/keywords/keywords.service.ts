@@ -43,11 +43,11 @@ export class KeywordsService {
         throw new NotFoundException(`Website profile with ID ${websiteProfileId} not found`);
       }
       
-      if (!websiteProfile.summary || !websiteProfile.seedKeywords || !websiteProfile.ICPs) {
+      if (!websiteProfile.shortAbout || !websiteProfile.seedKeywords || !websiteProfile.ICPs) {
         throw new BadRequestException('Website profile does not have complete semantic analysis data. Please run semantic analysis first.');
       }
 
-      const { summary, seedKeywords, ICPs } = websiteProfile;
+      const { shortAbout, seedKeywords, ICPs } = websiteProfile;
       
       if (!seedKeywords || !ICPs) {
         throw new BadRequestException('Semantic analysis data is incomplete. Missing seed keywords or ICPs.');
@@ -224,12 +224,12 @@ export class KeywordsService {
       return [];
     }
 
-    // Prepare business context for filtering
-    const businessContext = {
-      summary: websiteProfile.summary || '',
-      icps: websiteProfile.ICPs || [],
-      domain: websiteProfile.domain,
-    };
+          // Prepare business context for filtering
+      const businessContext = {
+        business_overview: websiteProfile.business_overview || '',
+        icps: websiteProfile.ICPs || [],
+        domain: websiteProfile.domain,
+      };
 
     // Filter keywords using AI agent
     const filterResult = await this.filterRelevancyAgent.filterRelevantKeywords(

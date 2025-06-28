@@ -10,7 +10,8 @@ export interface IWebsiteProfile {
   updatedAt: Date;
   jobId?: string | null;
   lastScrapedAt?: Date | null;
-  summary?: string | null;
+  shortAbout?: string | null;
+  business_overview?: string | null;
   valueProps?: string[] | null;
   intents?: string[] | null;
   ICPs?: string[] | null;
@@ -43,7 +44,10 @@ export class WebsiteProfile {
   lastScrapedAt?: Date | null;
 
   @Prop({ type: String, required: false, default: null })
-  summary?: string | null;
+  shortAbout?: string | null;
+
+  @Prop({ type: String, required: false, default: null })
+  business_overview?: string | null;
 
   @Prop({ type: [String], required: false, default: null })
   valueProps?: string[] | null;

@@ -14,7 +14,7 @@ const KeywordRelevancySchema = z.object({
 export type KeywordRelevancyResponse = z.infer<typeof KeywordRelevancySchema>;
 
 export interface BusinessContext {
-  summary: string;
+  business_overview: string;
   icps: string[];
   domain: string;
 }
@@ -165,13 +165,13 @@ export class FilterKeywordsRelevancy {
    * Builds the prompt for keyword relevancy filtering
    */
   private buildRelevancyPrompt(keywords: string[], businessContext: BusinessContext): string {
-    const { summary, icps, domain } = businessContext;
+    const { business_overview, icps, domain } = businessContext;
 
     return `You are a keyword relevancy expert. Filter the following keywords to keep ONLY those that are directly relevant to this business.
 
 BUSINESS CONTEXT:
 Website Domain: ${domain}
-Business Summary: ${summary}
+Business Summary: ${business_overview}
 
 Ideal Customer Profiles:
 ${icps.map((icp, i) => `${i + 1}. ${icp}`).join('\n')}
