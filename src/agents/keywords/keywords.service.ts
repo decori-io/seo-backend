@@ -209,18 +209,24 @@ export class KeywordsService {
   async FilterRelevantKeywords(websiteProfileId: string, validatedKeywords?: Keyword[]): Promise<Keyword[]> {
     this.logger.debug(`Filtering relevant keywords for website profile ${websiteProfileId}...`);
     
-    // Step 1: Fetch website profile
-    const websiteProfile = await this.websiteProfilesService.findById(websiteProfileId);
+    // Step 1: Fetch website profile with populated keywords
+    const websiteProfile = await this.websiteProfilesService.findByIdWithPopulatedKeywords(websiteProfileId);
     
     if (!websiteProfile) {
       throw new NotFoundException(`Website profile with ID ${websiteProfileId} not found`);
     }
 
-    // Step 2: Check if relevant keywords already exist (future caching implementation)
-    // For now, always filter to ensure fresh relevancy check
+    // Step 2: Check if relevant keywords already exist in cache
+    if (websiteProfile.relevantKeywords && websiteProfile.relevantKeywords.length > 0) {
+      this.logger.debug(`Using cached relevant keywords for website profile ${websiteProfileId}`);
+      const keywords = websiteProfile.relevantKeywords.map(keyword => (keyword as KeywordDocument).toObject()  ? (keyword as KeywordDocument).toObject() : keyword);
+      // Filter out any undefined populated documents and cast to Keyword[]
+      const sorted = sortKeywordsByScore(keywords as Keyword[]);
+      return sorted;
+    }
     
     // Step 3: Filter keywords if not cached
-    this.logger.debug('Filtering keywords for relevancy...');
+    this.logger.debug('Generating new relevant keywords...');
     
     // Use provided validatedKeywords or fetch from profile
     const keywordsTmp = validatedKeywords || await this.GenerateValidatedKeywords(websiteProfileId);
@@ -232,12 +238,12 @@ export class KeywordsService {
       return [];
     }
 
-          // Prepare business context for filtering
-      const businessContext = {
-        business_overview: websiteProfile.businessOverview || '',
-        icps: websiteProfile.ICPs || [],
-        domain: websiteProfile.domain,
-      };
+    // Prepare business context for filtering
+    const businessContext = {
+      business_overview: websiteProfile.businessOverview || '',
+      icps: websiteProfile.ICPs || [],
+      domain: websiteProfile.domain,
+    };
 
     // Filter keywords using AI agent
     const filterResult = await this.filterRelevancyAgent.filterRelevantKeywords(
@@ -246,10 +252,19 @@ export class KeywordsService {
     );
 
     this.logger.debug(`Filtered to ${filterResult.relevantKeywords.length}/${keywordsToFilter.length} relevant keywords`);
+    
     // Sort relevant keywords using the keyword sorting utility
     const sortedRelevantKeywords = sortKeywordsByScore(filterResult.relevantKeywords);
     
-    this.logger.debug(`Sorted ${sortedRelevantKeywords.length} relevant keywords by priority`);
+    // Step 4: Persist relevant keywords and get their ObjectIds
+    const keywordObjectIds = await this.persistValidatedKeywords(sortedRelevantKeywords);
+    
+    // Step 5: Save keyword ObjectIds to the website profile
+    await this.websiteProfilesService.update(websiteProfileId, {
+      relevantKeywords: keywordObjectIds,
+    });
+    
+    this.logger.debug(`Generated and cached ${sortedRelevantKeywords.length} relevant keywords for website profile ${websiteProfileId}`);
     return sortedRelevantKeywords;
   }
 

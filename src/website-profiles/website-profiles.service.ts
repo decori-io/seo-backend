@@ -27,7 +27,7 @@ export class WebsiteProfilesService {
   }
 
   async findByIdWithPopulatedKeywords(id: string): Promise<WebsiteProfilePopulatedDocument | null> {
-    return this.websiteProfileModel.findById(id).populate('seoValidatedKeywords').exec();
+    return this.websiteProfileModel.findById(id).populate('seoValidatedKeywords').populate('relevantKeywords').exec();
   }
 
   async update(id: string, update: Partial<WebsiteProfile>): Promise<WebsiteProfileDocument | null> {

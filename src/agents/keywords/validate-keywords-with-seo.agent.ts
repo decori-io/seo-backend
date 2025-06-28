@@ -27,17 +27,38 @@ export class ValidateKeywordsWithSEO {
     
     this.logger.debug(`Getting recommendations from Ahrefs API for ${leanKeywords.length} keywords...`);
     
-    if (process.env.NODE_ENV != 'production') {
-      leanKeywords = leanKeywords.slice(0, 2);
-    }
+    // if (process.env.NODE_ENV != 'production') {
+    //   leanKeywords = leanKeywords.slice(0, 2);
+    // }
+
+    // Progress tracking
+    let completedRequests = 0;
+    const totalRequests = leanKeywords.length;
+    
+    // Set up progress logging every 5 seconds
+    const progressInterval = setInterval(() => {
+      const percentage = Math.round((completedRequests / totalRequests) * 100);
+      this.logger.log(`Keyword validation progress: ${completedRequests}/${totalRequests} (${percentage}%) completed`);
+    }, 5000);
 
     // Process all keywords with rate limiting (5 requests per second)
     const recommendationPromises = leanKeywords.map(keyword => 
-      this.rateLimiter.schedule(() => this.keywordsSuggestionsAPI.getRecommendedKeywordsAsync(keyword))
+      this.rateLimiter.schedule(() => 
+        this.keywordsSuggestionsAPI.getRecommendedKeywordsAsync(keyword)
+          .finally(() => {
+            completedRequests++;
+          })
+      )
     );
 
     // Use Promise.allSettled for better error handling - failed requests won't break others
     const allResults = await Promise.allSettled(recommendationPromises);
+    
+    // Clear the progress interval
+    clearInterval(progressInterval);
+    
+    // Log final completion
+    this.logger.log(`Keyword validation completed: ${totalRequests}/${totalRequests} (100%)`);
     
     // Extract successful results and flatten
     const allRecommendations = allResults
@@ -52,8 +73,6 @@ export class ValidateKeywordsWithSEO {
     return processedKeywords;
   }
 
-
-
   /**
    * Process and refine keyword recommendations using functional programming patterns
    */
@@ -63,12 +82,6 @@ export class ValidateKeywordsWithSEO {
       .filter(createDeduplicationFilter())                           // Deduplicate
       .sort(compareKeywords)                                          // Sort by quality score (final step)
   }
-
-
-
-
-
-
 
   /**
    * Filter keywords by search volume and difficulty thresholds
@@ -99,6 +112,4 @@ export class ValidateKeywordsWithSEO {
       hard: keywords.filter(kw => kw.difficulty === 'HIGH'),
     };
   }
-
-
 } 

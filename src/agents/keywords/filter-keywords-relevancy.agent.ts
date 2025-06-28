@@ -53,15 +53,57 @@ export class FilterKeywordsRelevancy {
 
     // Process keywords in batches to avoid token limits
     const batchSize = 150;
+    const batches: Keyword[][] = [];
+    
+    // Create batches
+    for (let i = 0; i < validatedKeywords.length; i += batchSize) {
+      batches.push(validatedKeywords.slice(i, i + batchSize));
+    }
+
+    const totalBatches = batches.length;
+    this.logger.log(`Processing ${totalBatches} batches of keywords for relevancy filtering...`);
+
+    // Progress tracking
+    let completedBatches = 0;
+    
+    // Set up progress logging every 5 seconds
+    const progressInterval = setInterval(() => {
+      const percentage = Math.round((completedBatches / totalBatches) * 100);
+      this.logger.log(`Keyword filtering progress: ${completedBatches}/${totalBatches} batches (${percentage}%) completed`);
+    }, 5000);
+
     const allRelevantKeywords: Keyword[] = [];
     const allIrrelevantKeywords: Keyword[] = [];
 
-    for (let i = 0; i < validatedKeywords.length; i += batchSize) {
-      const batch = validatedKeywords.slice(i, i + batchSize);
-      const batchResult = await this.processSingleBatch(batch, businessContext, Math.floor(i / batchSize) + 1);
+    try {
+      // Process all batches in parallel
+      const batchPromises = batches.map((batch, index) => 
+        this.processSingleBatch(batch, businessContext, index + 1)
+          .finally(() => {
+            completedBatches++;
+          })
+      );
+
+      // Wait for all batches to complete
+      const batchResults = await Promise.all(batchPromises);
+
+      // Clear the progress interval
+      clearInterval(progressInterval);
       
-      allRelevantKeywords.push(...batchResult.relevantKeywords);
-      allIrrelevantKeywords.push(...batchResult.irrelevantKeywords);
+      // Log final completion
+      this.logger.log(`Keyword filtering completed: ${totalBatches}/${totalBatches} batches (100%)`);
+
+      // Combine results from all batches
+      batchResults.forEach(batchResult => {
+        allRelevantKeywords.push(...batchResult.relevantKeywords);
+        allIrrelevantKeywords.push(...batchResult.irrelevantKeywords);
+      });
+
+    } catch (error) {
+      // Clear the progress interval on error
+      clearInterval(progressInterval);
+      this.logger.error('Error during parallel batch processing:', error);
+      throw error;
     }
 
     this.logger.debug(`Filtered to ${allRelevantKeywords.length} relevant and ${allIrrelevantKeywords.length} irrelevant out of ${validatedKeywords.length} total keywords`);

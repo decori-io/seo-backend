@@ -19,11 +19,14 @@ export interface IWebsiteProfile {
   leanKeywords?: string[] | null;
   // References to validated keywords from third-party SEO data providers
   seoValidatedKeywords?: Types.ObjectId[] | null;
+  // References to filtered relevant keywords
+  relevantKeywords?: Types.ObjectId[] | null;
 }
 
 // Interface for populated website profile (when keywords are populated)
-export interface IWebsiteProfilePopulated extends Omit<IWebsiteProfile, 'seoValidatedKeywords'> {
+export interface IWebsiteProfilePopulated extends Omit<IWebsiteProfile, 'seoValidatedKeywords' | 'relevantKeywords'> {
   seoValidatedKeywords?: PopulatedDoc<KeywordDocument>[] | null;
+  relevantKeywords?: PopulatedDoc<KeywordDocument>[] | null;
 }
 
 export type WebsiteProfileDocument = IWebsiteProfile & Document;
@@ -71,6 +74,14 @@ export class WebsiteProfile {
     default: null 
   })
   seoValidatedKeywords?: Types.ObjectId[] | null;
+
+  // References to filtered relevant keywords
+  @Prop({ 
+    type: [{ type: Types.ObjectId, ref: 'Keyword' }], 
+    required: false, 
+    default: null 
+  })
+  relevantKeywords?: Types.ObjectId[] | null;
 }
 
 export const WebsiteProfileSchema = SchemaFactory.createForClass(WebsiteProfile); 

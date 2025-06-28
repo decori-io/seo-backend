@@ -23,6 +23,7 @@ export const scoreKeyword = (keyword: Keyword): number => {
     // Significant keywords are tiered by difficulty (lower difficulty = higher tier)
     switch (difficulty) {
       case 'LOW':
+      case 'UNKNOWN': // cuurently UNKNOWN is the same as LOW
         tierScore = 2; // LOW difficulty - easiest to rank for
         break;
       case 'MEDIUM':
@@ -31,7 +32,6 @@ export const scoreKeyword = (keyword: Keyword): number => {
       case 'HIGH':
         tierScore = 0; // HIGH difficulty - hardest to rank for
         break;
-      case 'UNKNOWN':
       default:
         tierScore = 0; // Default to lowest tier for unknown difficulty
         break;
