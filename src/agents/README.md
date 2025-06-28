@@ -36,7 +36,7 @@ The response is validated against a Zod schema ensuring type safety:
 {
   "ai_summary": {
     "shortAbout": "A concise, natural Slack-style feedback message to the business owner",
-    "business_overview": "A comprehensive analysis of the business including geographic coverage and strategic insights",
+    "businessOverview": "A comprehensive analysis of the business including geographic coverage and strategic insights",
     "value_props": ["7-10 unique, highly specific value propositions"],
     "intents": ["7-10 distinct user intents"],
     "ICPs": ["5 ideal customer profiles (concise)"],

@@ -85,7 +85,7 @@ export class WebsiteProfilesService {
     // Update the profile with all semantic analysis fields (converting from snake_case to camelCase)
     const updatedProfile = await this.update(websiteProfileId, {
       shortAbout: semanticResult.ai_summary.shortAbout,
-      business_overview: semanticResult.ai_summary.business_overview,
+      businessOverview: semanticResult.ai_summary.businessOverview,
       valueProps: semanticResult.ai_summary.value_props,
       intents: semanticResult.ai_summary.intents,
       ICPs: semanticResult.ai_summary.ICPs,

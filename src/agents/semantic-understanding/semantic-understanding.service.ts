@@ -64,8 +64,11 @@ export class SemanticUnderstandingService {
    * Builds the analysis prompt with improved structure and clarity
    */
   private buildAnalysisPrompt(pagesData: string): string {
-    return `You are a world-class product marketer, SEO expert, and content strategist. Given the following product or website content, return a structured JSON object with the following fields:
-Return only the JSON object. Do not include any explanation or extra commentary.
+    return `My life depends on it, you must do your best, You are a world-class product marketer, SEO expert, and content strategist. 
+
+Analyze the following website content and return a structured JSON object with business insights for SEO and marketing strategy.
+
+The response format and field requirements are defined by the schema - follow those specifications exactly.
 
 Page content: ${pagesData}`;
   }

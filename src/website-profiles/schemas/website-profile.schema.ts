@@ -11,7 +11,7 @@ export interface IWebsiteProfile {
   jobId?: string | null;
   lastScrapedAt?: Date | null;
   shortAbout?: string | null;
-  business_overview?: string | null;
+  businessOverview?: string | null;
   valueProps?: string[] | null;
   intents?: string[] | null;
   ICPs?: string[] | null;
@@ -47,7 +47,7 @@ export class WebsiteProfile {
   shortAbout?: string | null;
 
   @Prop({ type: String, required: false, default: null })
-  business_overview?: string | null;
+  businessOverview?: string | null;
 
   @Prop({ type: [String], required: false, default: null })
   valueProps?: string[] | null;

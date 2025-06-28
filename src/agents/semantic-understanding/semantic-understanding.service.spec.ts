@@ -48,7 +48,7 @@ describe('SemanticUnderstandingService', () => {
     // Create a valid response that matches our Zod schema
     const validResponse = {
       shortAbout: 'Test product short about',
-      business_overview: 'Test business overview',
+      businessOverview: 'Test business overview',
       value_props: ['Test value prop 1', 'Test value prop 2'],
       intents: ['Test intent 1', 'Test intent 2'],
       ICPs: ['Test ICP 1', 'Test ICP 2'],
@@ -72,7 +72,7 @@ describe('SemanticUnderstandingService', () => {
     expect(result).toBeDefined();
     expect(result.ai_summary).toBeDefined();
     expect(result.ai_summary.shortAbout).toBe('Test product short about');
-    expect(result.ai_summary.business_overview).toBe('Test business overview');
+    expect(result.ai_summary.businessOverview).toBe('Test business overview');
     expect(Array.isArray(result.ai_summary.value_props)).toBe(true);
     expect(Array.isArray(result.ai_summary.intents)).toBe(true);
     expect(Array.isArray(result.ai_summary.ICPs)).toBe(true);
@@ -83,7 +83,7 @@ describe('SemanticUnderstandingService', () => {
     // Create a valid response that matches our Zod schema
     const validResponse = {
       shortAbout: 'Test product short about',
-      business_overview: 'Test business overview',
+      businessOverview: 'Test business overview',
       value_props: ['Test value prop'],
       intents: ['Test intent'],
       ICPs: ['Test ICP'],
@@ -135,7 +135,7 @@ describe('SemanticUnderstandingService', () => {
     // Test that our schema validates correctly
     const validData = {
       shortAbout: 'Test short about',
-      business_overview: 'Test business overview',
+      businessOverview: 'Test business overview',
       value_props: ['prop1', 'prop2'],
       intents: ['intent1', 'intent2'],
       ICPs: ['icp1', 'icp2'],

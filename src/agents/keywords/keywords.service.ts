@@ -226,7 +226,7 @@ export class KeywordsService {
 
           // Prepare business context for filtering
       const businessContext = {
-        business_overview: websiteProfile.business_overview || '',
+        business_overview: websiteProfile.businessOverview || '',
         icps: websiteProfile.ICPs || [],
         domain: websiteProfile.domain,
       };
