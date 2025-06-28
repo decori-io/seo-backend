@@ -139,11 +139,19 @@ export class KeywordsService {
       throw new BadRequestException('No seed keywords provided and website profile does not have seed keywords');
     }
 
-    const leanKeywords = await this.expandKeywordsAgent.expandKeywords(keywordsToExpand);
+    const context: any = {
+      ...(websiteProfile.businessOverview ? { businessOverview: websiteProfile.businessOverview } : {}),
+      ...(websiteProfile.ICPs ? { icps: websiteProfile.ICPs } : {}),
+      ...(websiteProfile.intents ? { intents: websiteProfile.intents } : {}),
+    };
 
+    const expansionResult = await this.expandKeywordsAgent.expandKeywordsWithContext(keywordsToExpand, context);
+    const allExpandedKeywords = expansionResult.keyword_expansions.flatMap(pair => pair.expanded);
+    const leanKeywords = Array.from(new Set(allExpandedKeywords));
+    
     // Step 4: Save lean keywords to the website profile
     await this.websiteProfilesService.update(websiteProfileId, {
-      leanKeywords: leanKeywords,
+      leanKeywords,
     });
 
     this.logger.debug(`Generated and cached ${leanKeywords.length} lean keywords for website profile ${websiteProfileId}`);
